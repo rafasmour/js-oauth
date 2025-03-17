@@ -1,14 +1,15 @@
 import ApiError from '../utils/ApiError.js';
 import ApiResponse from '../utils/ApiResponse.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
-import {setEmail, userRegisterValidation, userValidation, validateEmail} from "../services/user.services";
+import {setEmail, userRegisterValidation, userLoginValidation, validateEmail} from "../services/user.services.js";
 import { User } from '../models/user.models.js';
 import jwt from 'jsonwebtoken';
-import
+import env from "../vars/env.js";
 
 const generateAccessAndRefreshToken = async (userId) => {
     try {
         const user = await User.findById(userId);
+        console.log(user);
         if(!user){
             throw new ApiError(404, "User not found");
         }
@@ -20,16 +21,16 @@ const generateAccessAndRefreshToken = async (userId) => {
         await user.save();
         return { accessToken, refreshToken };
     } catch (error) {
+        console.log(error);
         throw new ApiError(500, "Failed to generate Tokens");
     }
 }
 
 const registerUser = asyncHandler( async( req, res ) => {
+    console.log('something should be happening here')
     const { username, email, password } = req.body;
-
     const validUser = userRegisterValidation({ username, email, password });
-
-    if(!validUser){
+    if(validUser.errorCode){
         throw new ApiError(
             validUser.errorCode,
             validUser.message
@@ -42,7 +43,6 @@ const registerUser = asyncHandler( async( req, res ) => {
             email,
             password,
         })
-
         const createdUser = await User.findById(user._id).select(
             "-password -refreshToken"
         )
@@ -57,28 +57,26 @@ const registerUser = asyncHandler( async( req, res ) => {
                 new ApiResponse(201, "User created successfully", createdUser)
             )
     } catch (error) {
+        console.log(error)
         throw new ApiError (500, "Failed to register User");
     }
 });
 
 const loginUser = asyncHandler(async (req, res) => {
-    const { email, username, password } = req.body;
-
-    const validUser = userLoginValidation({ email, username, password });
-
+    const { email, password } = req.body;
+    const validUser = await userLoginValidation({ email, password });
     if(!validUser){
         throw new ApiError(
             validUser.errorCode,
             validUser.message
         )
     }
+    const {accessToken, refreshToken} = await generateAccessAndRefreshToken(validUser._id);
 
-    const {accessToken, refreshToken} = await generateAccessAndRefreshToken(user._id);
-
-    const loggedInUser = await User.findById(user._id).select("-password -refreshToken");
+    const loggedInUser = await User.findById(validUser._id).select("-password -refreshToken");
 
     if(!loggedInUser) {
-        throw new ApiErrror(
+        throw new ApiError(
             500,
             "Failed to login User"
         )
@@ -86,14 +84,14 @@ const loginUser = asyncHandler(async (req, res) => {
 
     const options = {
         httpOnly: true,
-        secure: process.env.NODE_ENV === "production"
+        secure: env.NODE_ENV === "production"
     }
-
+    console.log(accessToken, refreshToken);
     return res
         .status(200)
         .cookie("accessToken", accessToken, options)
         .cookie("refreshToken", refreshToken, options)
-
+        .json(new ApiResponse(200, "User logged in successfully", loggedInUser));
 })
 
 const logoutUser = asyncHandler(async (req, res) => {
@@ -109,7 +107,7 @@ const logoutUser = asyncHandler(async (req, res) => {
 
     const options = {
         httpOnly: true,
-        secure: process.env.NODE_ENV === "production"
+        secure: env.NODE_ENV === "production"
     }
 
     return res
@@ -130,13 +128,18 @@ const changeCurrentPassword = asyncHandler ( async (req, res) => {
         throw new ApiError(401, "Old password is incorrect");
     }
 
+    const passChanged = user.changePassword(newPassword);
+
     return res
         .status(200)
-        .json(new ApiResponse(200, "Password changed successfully", {}))
+        .json(new ApiResponse(200, "Password changed successfully", passChanged))
 })
 
 const getCurrentUser = asyncHandler( async (req, res) => {
-    return res.status(200).json(new ApiResponse(200, "Current user detauls", {}))
+
+    return res
+        .status(200)
+        .json(new ApiResponse(200, "Current user details", req.user))
 })
 
 const updateAccountDetails = asyncHandler( async (req, res) => {

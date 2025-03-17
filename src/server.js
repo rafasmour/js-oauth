@@ -1,15 +1,15 @@
-import dotenv from "dotenv";
 import { app } from "./app.js";
 import { mongoConnect } from "./db/mongo.js";
+import env from "./vars/env.js";
 
-const PORT = process.env.PORT || 3000;
-const DOMAIN = process.env.DOMAIN
-connectDB
+
+const PORT = env.PORT || 3000;
+console.log(env.PORT)
+mongoConnect()
     .then(() => {
         console.log("Connected to MongoDB");
-        // domain is the traefik entry url
         app.listen(PORT, () => {
-            console.log(`Api is working on endpoint ${DOMAIN}`);
+            console.log(`Api is working on endpoint ${PORT}`);
         })
     })
     .catch((error) => {

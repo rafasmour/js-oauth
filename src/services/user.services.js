@@ -1,10 +1,9 @@
 import validator from "email-validator";
-import { emptyFields } from "../utils/emptyFields";
-import {User} from "../models/user.models";
+import { emptyFields } from "../utils/emptyFields.js";
+import {User} from "../models/user.models.js";
 
 export const validateEmail =  (email) => validator.validate(email);
 export const userRegisterValidation = (user) => {
-    // checks if any field contains only whitespaces
     if( emptyFields(user) ) {
         return {
             errorCode: 400,
@@ -12,24 +11,22 @@ export const userRegisterValidation = (user) => {
         }
     }
     const usernameLength = user.username.length;
-    const validUsernameLength = usernameLength >= 3 && usernameLength <= 20;
+    const validUsernameLength = usernameLength >= 8 && usernameLength <= 20;
     if(!user.username || !validUsernameLength) {
-        if(!validLength) {
-            return {
-                errorCode: 400,
-                message: "Username must be between 3 and 20 characters"
-            }
+        return {
+            errorCode: 400,
+            message: "Username must be between 8 and 20 characters"
         }
     }
 
     const emailLength = user.email.length;
-    const validEmail = validateEmail(user.emailz);
-    const validEmailLength = emailLength >= 3 && emailLength <= 100;
+    const validEmail = validateEmail(user.email);
+    const validEmailLength = emailLength >= 8 && emailLength <= 100;
     const isValidEmail = (validEmail && validEmailLength);
     if(!user.email || !isValidEmail) {
         return {
             errorCode: 400,
-            message: "Invalid email address"
+            message: (!validEmail) ? "Invalid email address" : "Email must be between 8 and 100 characters"
         }
     }
 
@@ -53,18 +50,15 @@ export const userLoginValidation = async (user) => {
         }
     }
 
-
     const validUser = await User.findOne({
       email: user.email
     })
-
     if(!validUser) {
         return {
             errorCode: 404,
             message: "User not found"
         }
     }
-
     const isPasswordCorrect = await validUser.isPasswordCorrect(user.password);
     if(!isPasswordCorrect) {
         return {
@@ -73,7 +67,7 @@ export const userLoginValidation = async (user) => {
         }
     }
 
-    return true;
+    return validUser;
 }
 
 export const setEmail = async (userId, email) => {

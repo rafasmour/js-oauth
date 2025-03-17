@@ -19,7 +19,7 @@ router.route("/login").post(
     loginUser
 );
 
-router.route("/login").post(
+router.route("/logout").post(
     verifyJWT,
     logoutUser
 );
