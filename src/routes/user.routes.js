@@ -36,7 +36,7 @@ router.route("/change-password").post(
 
 router.route("/update-account").post(
     verifyJWT,
-    changeCurrentPassword
+    updateAccountDetails
 )
 
 export default router;

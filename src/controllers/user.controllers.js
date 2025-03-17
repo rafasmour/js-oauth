@@ -3,7 +3,6 @@ import ApiResponse from '../utils/ApiResponse.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import {setEmail, userRegisterValidation, userLoginValidation, validateEmail} from "../services/user.services.js";
 import { User } from '../models/user.models.js';
-import jwt from 'jsonwebtoken';
 import env from "../vars/env.js";
 
 const generateAccessAndRefreshToken = async (userId) => {
@@ -23,6 +22,7 @@ const generateAccessAndRefreshToken = async (userId) => {
     } catch (error) {
         console.log(error);
         throw new ApiError(500, "Failed to generate Tokens");
+        next(error);
     }
 }
 
@@ -59,6 +59,7 @@ const registerUser = asyncHandler( async( req, res ) => {
     } catch (error) {
         console.log(error)
         throw new ApiError (500, "Failed to register User");
+        next(error);
     }
 });
 
@@ -95,6 +96,7 @@ const loginUser = asyncHandler(async (req, res) => {
 })
 
 const logoutUser = asyncHandler(async (req, res) => {
+    console.log(req.user);
     await User.findByIdAndUpdate(
         req.user._id,
         {
@@ -114,7 +116,7 @@ const logoutUser = asyncHandler(async (req, res) => {
         .status(200)
         .clearCookie("accessToken", options)
         .clearCookie("refreshToken", options)
-        .json(new ApiResponse(200, "User logged out success"), {})
+        .json(new ApiResponse(200, "User logged out success", {}))
 })
 
 const changeCurrentPassword = asyncHandler ( async (req, res) => {
