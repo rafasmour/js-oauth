@@ -1,30 +1,17 @@
 import ApiError from '../utils/ApiError.js';
 import ApiResponse from '../utils/ApiResponse.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
-import {setEmail, userRegisterValidation, userLoginValidation, validateEmail} from "../services/user.services.js";
+import {
+    setEmail,
+    userRegisterValidation,
+    userLoginValidation,
+    validateEmail,
+    generateAccessAndRefreshToken
+} from "../services/user.services.js";
 import { User } from '../models/user.models.js';
 import env from "../vars/env.js";
 
-const generateAccessAndRefreshToken = async (userId) => {
-    try {
-        const user = await User.findById(userId);
-        console.log(user);
-        if(!user){
-            throw new ApiError(404, "User not found");
-        }
 
-        const accessToken = user.generateAccessToken();
-        const refreshToken = user.generateRefreshToken();
-
-        user.refreshToken = refreshToken;
-        await user.save();
-        return { accessToken, refreshToken };
-    } catch (error) {
-        console.log(error);
-        throw new ApiError(500, "Failed to generate Tokens");
-        next(error);
-    }
-}
 
 const registerUser = asyncHandler( async( req, res ) => {
     console.log('something should be happening here')
@@ -72,7 +59,14 @@ const loginUser = asyncHandler(async (req, res) => {
             validUser.message
         )
     }
-    const {accessToken, refreshToken} = await generateAccessAndRefreshToken(validUser._id);
+    const tokens = await generateAccessAndRefreshToken(validUser._id);
+
+    if(tokens.errorCode){
+        throw new ApiError(
+            tokens.errorCode,
+            tokens.message
+        )
+    }
 
     const loggedInUser = await User.findById(validUser._id).select("-password -refreshToken");
 

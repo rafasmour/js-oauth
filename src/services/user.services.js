@@ -1,9 +1,36 @@
 import validator from "email-validator";
 import { emptyFields } from "../utils/emptyFields.js";
 import {User} from "../models/user.models.js";
+import ApiError from "../utils/ApiError.js";
 
-export const validateEmail =  (email) => validator.validate(email);
-export const userRegisterValidation = (user) => {
+const validateEmail =  (email) => validator.validate(email);
+
+const generateAccessAndRefreshToken = async (userId) => {
+    try {
+        const user = await User.findById(userId);
+        console.log(user);
+        if(!user){
+            return {
+                errorCode: 404,
+                message: "Email or password is incorrect"
+            };
+        }
+
+        const accessToken = user.generateAccessToken();
+        const refreshToken = user.generateRefreshToken();
+
+        user.refreshToken = refreshToken;
+        await user.save();
+        return { accessToken, refreshToken };
+    } catch (error) {
+        return {
+            errorCode: 500,
+            message: "Failed to generate Tokens"
+        };
+
+    }
+}
+const userRegisterValidation = (user) => {
     if( emptyFields(user) ) {
         return {
             errorCode: 400,
@@ -42,7 +69,7 @@ export const userRegisterValidation = (user) => {
     return true;
 }
 
-export const userLoginValidation = async (user) => {
+const userLoginValidation = async (user) => {
     if( emptyFields(user) ) {
         return {
             errorCode: 400,
@@ -70,7 +97,7 @@ export const userLoginValidation = async (user) => {
     return validUser;
 }
 
-export const setEmail = async (userId, email) => {
+const setEmail = async (userId, email) => {
     const user = await User.findByIdAndUpdate(
         req.user._id,
         {
@@ -89,4 +116,12 @@ export const setEmail = async (userId, email) => {
     }
 
     return true;
+}
+
+export {
+    validateEmail,
+    generateAccessAndRefreshToken,
+    userRegisterValidation,
+    userLoginValidation,
+    setEmail,
 }
